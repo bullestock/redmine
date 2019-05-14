@@ -18,14 +18,24 @@ namespace :redmine do
                    
         mm = MoinMoinWiki.new(@moin_moin_path)
         mm.each_page do |page|
-          new_title = page['title']
+          new_title = page['title'].gsub('/', '-')
           puts "Title: " + new_title
           p = wiki.find_or_new_page(new_title)
+	  if new_title.include? "-"
+	    p.parent_title = new_title
+	    idx = p.parent_title.size - 1
+	    while p.parent_title[idx] != '-'
+	      idx = idx - 1
+	    end
+	    p.parent_title = p.parent_title[0..idx-1]
+	    puts "Title #{new_title} Parent #{p.parent_title}"
+	    p.save
+	  end
           page['revisions'].each_with_index do |revision, i|
             p.content = WikiContent.new(:page => p) if p.new_record?
             content = p.content_for_version(i)
             content.text = self.convert_wiki_text(revision,mm)
-            content.author = User.find_by_mail("YOUR@EMAIL.ADDRESS")
+            content.author = User.find_by_mail("tma@gatehouse.dk")
             content.comments = "Revision %d from MoinMoin." % i
             content.updated_on = page['revision_timestamps'][i]
           
@@ -36,7 +46,7 @@ namespace :redmine do
               attachment.open {
                 a = Attachment.new :created_on => attachment.time
                 a.file = attachment
-                a.author = User.find_by_mail("YOUR@EMAIL.ADDRESS")
+                a.author = User.find_by_mail("tma@gatehouse.dk")
                 a.description = ''
                 a.container = p
                 if a.save
@@ -164,7 +174,7 @@ namespace :redmine do
         project = Project.find_by_identifier(identifier)
       
         if !project
-          die
+          abort "Project #{identifier} not found"
         else      
           puts "Found Project: " + project.to_yaml
         end        
@@ -234,10 +244,11 @@ namespace :redmine do
         #text = text.gsub(/(^ .*?\n)\n/m) { |s| "#{$1}</pre></code>\n" }
         text = text.gsub(/\{\{\{\s*$/) { |s| "<pre><code>" }
         text = text.gsub(/\}\}\}\s*$/) { |s| "</code></pre>\n" }
-        text = text.gsub(/\{\{\{/) { |s| "<code>" }
+        text = text.gsub(/\{\{\{/) { |s| "<pre><code>" }
         text = text.gsub(/\}\}\}/) { |s| "</code>" }
         # Some silly leading whitespace.
         text = text.gsub(/<pre><code>\n/m) { |s| "<pre><code>" }        
+        text = text.gsub('#!cplusplus', '')
         
         # Tables
         # Half-assed attempt
@@ -270,7 +281,8 @@ namespace :redmine do
         text = text.gsub(/\s*attachment:([^\s]+)/i) {|s| "\n\nattachment:#{$1}"}
 
 	# throw away pragma statements
-        text = text.gsub(/^#pragma (.*)$/is) {|s| ""}
+	#puts text
+        text = text.gsub(/^#pragma (.*)$/isu) {|s| ""}
 
         text
       end
@@ -286,8 +298,8 @@ namespace :redmine do
       end
     end    
     
-    prompt('Target project identifier', :default => 'project-id') {|identifier| MMMigrate.target_project_identifier identifier}
-    prompt('Path to MoinMoin pages folder', :default => '/path/to/data/pages') {|path| MMMigrate.target_moin_moin_path path}
+    MMMigrate.target_project_identifier 'ais'
+    MMMigrate.target_moin_moin_path '/home/bitnami/moin/pages'
     MMMigrate.migrate    
   end
 end
