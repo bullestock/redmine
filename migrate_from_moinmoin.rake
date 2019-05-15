@@ -18,7 +18,7 @@ namespace :redmine do
                    
         mm = MoinMoinWiki.new(@moin_moin_path)
         mm.each_page do |page|
-          new_title = page['title'].gsub('/', '-')
+          new_title = page['title'].gsub('/', '-').gsub('P-GH-AIS-', '').gsub('P-GH-AIS', '')
           puts "Title: " + new_title
           p = wiki.find_or_new_page(new_title)
 	  if new_title.include? "-"
@@ -34,7 +34,11 @@ namespace :redmine do
           page['revisions'].each_with_index do |revision, i|
             p.content = WikiContent.new(:page => p) if p.new_record?
             content = p.content_for_version(i)
-            content.text = self.convert_wiki_text(revision,mm)
+	    if !content
+	      puts "ERROR: No content for version #{i}"
+	      next
+	    end
+            content.text = self.convert_wiki_text(revision, mm)
             content.author = User.find_by_mail("tma@gatehouse.dk")
             content.comments = "Revision %d from MoinMoin." % i
             content.updated_on = page['revision_timestamps'][i]
@@ -174,9 +178,7 @@ namespace :redmine do
         project = Project.find_by_identifier(identifier)
       
         if !project
-          abort "Project #{identifier} not found"
-        else      
-          puts "Found Project: " + project.to_yaml
+          abort "ABORT: Project #{identifier} not found"
         end        
       
         @target_project = project.new_record? ? nil : project
