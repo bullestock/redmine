@@ -18,9 +18,14 @@ namespace :redmine do
                    
         mm = MoinMoinWiki.new(@moin_moin_path)
         mm.each_page do |page|
+	  if !page
+	    next
+	  end
           new_title = page['title'].gsub('/', '-').gsub('P-GH-AIS-', '').gsub('P-GH-AIS', '')
           puts "Title: " + new_title
           p = wiki.find_or_new_page(new_title)
+	  puts "New: #{p.new_record?}"
+	  is_new = p.new_record?
 	  if new_title.include? "-"
 	    p.parent_title = new_title
 	    idx = p.parent_title.size - 1
@@ -28,19 +33,24 @@ namespace :redmine do
 	      idx = idx - 1
 	    end
 	    p.parent_title = p.parent_title[0..idx-1]
-	    puts "Title #{new_title} Parent #{p.parent_title}"
 	    p.save
+	    puts "Title #{new_title} Parent #{p.parent_title}"
 	  end
           page['revisions'].each_with_index do |revision, i|
-            p.content = WikiContent.new(:page => p) if p.new_record?
+	    rev = page['revision_ids'][i]
+	    #puts "Rev #{i}: #{rev}"
+            p.content = WikiContent.new(:page => p) if is_new
             content = p.content_for_version(i)
 	    if !content
-	      puts "ERROR: No content for version #{i}"
-	      next
+	      puts "Content: #{p.content}"
+	      abort "ABORT: No content for version #{i}"
 	    end
             content.text = self.convert_wiki_text(revision, mm)
             content.author = User.find_by_mail("tma@gatehouse.dk")
-            content.comments = "Revision %d from MoinMoin." % i
+	    if rev == 0
+	      abort "Revision is zero for #{new_title}"
+	    end
+            content.comments = "Revision %s from MoinMoin." % rev
             content.updated_on = page['revision_timestamps'][i]
           
             # Attachments
@@ -145,11 +155,25 @@ namespace :redmine do
 
           r['revisions'] = []
           r['revision_timestamps'] = []
+          r['revision_ids'] = []
           rev_names = Dir.entries(fpath + "revisions").reject { |e| e == "." || e == ".." }
-          rev_names.sort.each do |revision| 
+	  last_rev = 0
+          rev_names.sort.each do |revision|
+	    #puts "REV #{revision}"
             r['revisions'] << IO.read(fpath + "revisions" + "/" + revision)
             r['revision_timestamps'] << File.mtime(fpath + "revisions" + "/" + revision)
+            r['revision_ids'] << revision
+	    rev = revision.to_i
+	    if rev > last_rev
+  	      last_rev = rev
+	    end
           end
+          current = IO.read(fpath + "current").to_i
+          if current > last_rev
+            puts "DELETED: #{folder} current #{current} last #{last_rev}"
+	    return nil
+          end
+	  puts "OK: #{folder} current #{current} last #{last_rev}"
 
           r['attachments'] = []
 	  if File.exists?(fpath + "attachments") then
@@ -178,7 +202,9 @@ namespace :redmine do
         project = Project.find_by_identifier(identifier)
       
         if !project
-          abort "ABORT: Project #{identifier} not found"
+          abort "Project #{identifier} not found"
+        #else      
+        #  puts "Found Project: " + project.to_yaml
         end        
       
         @target_project = project.new_record? ? nil : project
