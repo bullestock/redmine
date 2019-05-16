@@ -15,16 +15,18 @@ namespace :redmine do
                    :start_page => @target_project.name)
 
         migrated_wiki_attachments = 0
+	errors = 0
                    
         mm = MoinMoinWiki.new(@moin_moin_path)
+	pageno = 1
         mm.each_page do |page|
 	  if !page
 	    next
 	  end
           new_title = page['title'].gsub('/', '-').gsub('P-GH-AIS-', '').gsub('P-GH-AIS', '')
-          puts "Title: " + new_title
+          #puts "Title: " + new_title
           p = wiki.find_or_new_page(new_title)
-	  puts "New: #{p.new_record?}"
+	  #puts "New: #{p.new_record?}"
 	  is_new = p.new_record?
 	  if new_title.include? "-"
 	    p.parent_title = new_title
@@ -33,53 +35,62 @@ namespace :redmine do
 	      idx = idx - 1
 	    end
 	    p.parent_title = p.parent_title[0..idx-1]
-	    p.save
-	    puts "Title #{new_title} Parent #{p.parent_title}"
+	    #p.save
+	    #puts "Title #{new_title} Parent #{p.parent_title}"
 	  end
-          page['revisions'].each_with_index do |revision, i|
-	    rev = page['revision_ids'][i]
-	    #puts "Rev #{i}: #{rev}"
-            p.content = WikiContent.new(:page => p) if is_new
-            content = p.content_for_version(i)
-	    if !content
-	      puts "Content: #{p.content}"
-	      abort "ABORT: No content for version #{i}"
-	    end
-            content.text = self.convert_wiki_text(revision, mm)
-            content.author = User.find_by_mail("tma@gatehouse.dk")
-	    if rev == 0
-	      abort "Revision is zero for #{new_title}"
-	    end
-            content.comments = "Revision %s from MoinMoin." % rev
-            content.updated_on = page['revision_timestamps'][i]
+	  puts "Page #{pageno}: #{new_title}"
+	  pageno = pageno + 1
+	  begin
+            page['revisions'].each_with_index do |revision, i|
+	      rev = page['revision_ids'][i]
+	      #puts "Rev #{i}: #{rev}"
+	      p.content = WikiContent.new(:page => p) if is_new
+	      content = p.content_for_version(i)
+	      if !content
+	        puts "Content: #{p.content}"
+		abort "ABORT: No content for version #{i}"
+	      end
+	      content.text = self.convert_wiki_text(revision, mm)
+	      content.author = User.find_by_mail("tma@gatehouse.dk")
+	      if rev == 0
+	        abort "Revision is zero for #{new_title}"
+	      end
+	      content.comments = "Revision %s from MoinMoin." % rev
+	      content.updated_on = page['revision_timestamps'][i]
           
-            # Attachments
-            page['attachments'].each do |attachment|
-              next unless attachment.exist?
-              next if p.attachments.find_by_filename(attachment.filename.gsub(/^.*(\\|\/)/, '').gsub(/[^\w\.\-]/,'_')) #add only once per page
-              attachment.open {
-                a = Attachment.new :created_on => attachment.time
-                a.file = attachment
-                a.author = User.find_by_mail("tma@gatehouse.dk")
-                a.description = ''
-                a.container = p
-                if a.save
-                  migrated_wiki_attachments += 1 
-                else
-                  pp a
-                end
-              }
-            end
+	      # Attachments
+	      page['attachments'].each do |attachment|
+                next unless attachment.exist?
+		next if p.attachments.find_by_filename(attachment.filename.gsub(/^.*(\\|\/)/, '').gsub(/[^\w\.\-]/,'_')) #add only once per page
+		attachment.open {
+                  a = Attachment.new :created_on => attachment.time
+		  a.file = attachment
+		  a.author = User.find_by_mail("tma@gatehouse.dk")
+		  a.description = ''
+		  a.container = p
+		  if a.save
+                    migrated_wiki_attachments += 1 
+		  else
+                    pp a
+		  end
+		}
+              end
 
-            #puts "  Text: " + content.text
-            #puts "  Comment: " + p.content.comments
-            #puts "  Timestamp: " + p.content.updated_on.to_s
-            p.new_record? ? p.save : Time.fake(content.updated_on) { content.save }
-          end
-          puts "  Revisions:      #{page['revisions'].count}"
+              #puts "  Text: " + content.text
+              #puts "  Comment: " + p.content.comments
+              #puts "  Timestamp: " + p.content.updated_on.to_s
+	      p.new_record? ? p.save : Time.fake(content.updated_on) { content.save }
+            end
+	    puts "  Revisions:      #{page['revisions'].count}"
+	  rescue StandardError => e
+	    puts "Exception: #{e}"
+	    errors = errors + 1
+	    next
+	  end
         end
 
         puts "Wiki files:      #{migrated_wiki_attachments}"
+        puts "Errors:          #{errors}"
 
       end
 
@@ -170,10 +181,10 @@ namespace :redmine do
           end
           current = IO.read(fpath + "current").to_i
           if current > last_rev
-            puts "DELETED: #{folder} current #{current} last #{last_rev}"
+	    # Deleted page
 	    return nil
           end
-	  puts "OK: #{folder} current #{current} last #{last_rev}"
+	  #puts "OK: #{folder} current #{current} last #{last_rev}"
 
           r['attachments'] = []
 	  if File.exists?(fpath + "attachments") then
