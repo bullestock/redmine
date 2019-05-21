@@ -41,6 +41,7 @@ namespace :redmine do
 	  puts "Page #{pageno}: #{new_title}"
 	  pageno = pageno + 1
 	  begin
+            content = nil
             page['revisions'].each_with_index do |revision, i|
 	      rev = page['revision_ids'][i]
 	      #puts "Rev #{i}: #{rev}"
@@ -57,30 +58,30 @@ namespace :redmine do
 	      end
 	      content.comments = "Revision %s from MoinMoin." % rev
 	      content.updated_on = page['revision_timestamps'][i]
-          
-	      # Attachments
-	      page['attachments'].each do |attachment|
-                next unless attachment.exist?
-		next if p.attachments.find_by_filename(attachment.filename.gsub(/^.*(\\|\/)/, '').gsub(/[^\w\.\-]/,'_')) #add only once per page
-		attachment.open {
-                  a = Attachment.new :created_on => attachment.time
-		  a.file = attachment
-		  a.author = User.find_by_mail("tma@gatehouse.dk")
-		  a.description = ''
-		  a.container = p
-		  if a.save
-                    migrated_wiki_attachments += 1 
-		  else
-                    pp a
-		  end
-		}
-              end
-
-              #puts "  Text: " + content.text
-              #puts "  Comment: " + p.content.comments
-              #puts "  Timestamp: " + p.content.updated_on.to_s
-	      p.new_record? ? p.save : Time.fake(content.updated_on) { content.save }
             end
+	    # Attachments
+	    page['attachments'].each do |attachment|
+              next unless attachment.exist?
+	      next if p.attachments.find_by_filename(attachment.filename.gsub(/^.*(\\|\/)/, '').gsub(/[^\w\.\-]/,'_')) #add only once per page
+	      attachment.open {
+                a = Attachment.new :created_on => attachment.time
+		a.file = attachment
+		a.author = User.find_by_mail("tma@gatehouse.dk")
+		a.description = ''
+		a.container = p
+		if a.save
+                  migrated_wiki_attachments += 1 
+		else
+                  pp a
+		end
+	      }
+            end
+
+            #puts "  Text: " + content.text
+            #puts "  Comment: " + p.content.comments
+            #puts "  Timestamp: " + p.content.updated_on.to_s
+	    p.new_record? ? p.save : Time.fake(content.updated_on) { content.save }
+
 	    puts "  Revisions:      #{page['revisions'].count}"
 	  rescue StandardError => e
 	    puts "Exception: #{e}"
@@ -323,6 +324,9 @@ namespace :redmine do
 	#puts text
         text = text.gsub(/^#pragma (.*)$/isu) {|s| ""}
 
+        # Strip tabs before bullets
+        text = text.gsub('\t*', '*')
+        
         text
       end
     end
