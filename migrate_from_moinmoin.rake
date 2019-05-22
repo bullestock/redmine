@@ -8,7 +8,7 @@ namespace :redmine do
   desc 'MoinMoin migration script'
   task :migrate_from_moinmoin => :environment do
     module MMMigrate
-      @single_page = 'C(2b2b)_Programming_Language'
+      #@single_page = 'AISHub'
 
       def self.migrate
         puts "No wiki defined" unless @target_project.wiki
@@ -265,6 +265,7 @@ namespace :redmine do
       
       # Basic wiki syntax conversion
       def self.convert_wiki_text(text,mm)
+        #puts "--- CONVERT"
         # Titles
         text = text.gsub(/^(\=+)\s*([^=]+)\s*\=+\s*$/) {|s| "\nh#{$1.length}. #{$2}\n"}
         # Internal links
@@ -289,8 +290,10 @@ namespace :redmine do
         #text = text.gsub(/(^\n^ .*?$)/m) { |s| "<pre><code>#{$1}" }
         #text = text.gsub(/(^ .*?\n)\n/m) { |s| "#{$1}</pre></code>\n" }
         text = text.gsub(/\{\{\{\s*$/) { |s| "<pre><code>" }
-        text = text.gsub(/\}\}\}\s*$/) { |s| "</code></pre>\n" }
-        text = text.gsub(/\{\{\{/) { |s| "<pre><code>" }
+        #puts "BEFORE 4 #{text}"
+        text = text.gsub(/^\s*\}\}\}\s*$/) { |s| "</code></pre>\n" }
+        #puts "AFTER 4 #{text}"
+        text = text.gsub(/\{\{\{/) { |s| "<code>" }
         text = text.gsub(/\}\}\}/) { |s| "</code>" }
         # Some silly leading whitespace.
         text = text.gsub(/<pre><code>\n/m) { |s| "<pre><code>" }        
@@ -333,6 +336,11 @@ namespace :redmine do
         # Strip whitespace before bullets
         text = text.gsub(/[ \t]+\*/, '*')
         
+        # Strip whitespace before enumerations
+        text = text.gsub(/[ \t]+1\./, '#')
+
+        #puts "FINAL #{text}"
+
         text
       end
     end
