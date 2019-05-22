@@ -330,8 +330,8 @@ namespace :redmine do
 	#puts text
         text = text.gsub(/^#pragma (.*)$/isu) {|s| ""}
 
-        # Strip tabs before bullets
-        text = text.gsub('\t*', '*')
+        # Strip whitespace before bullets
+        text = text.gsub(/[ \t]+\*/, '*')
         
         text
       end
