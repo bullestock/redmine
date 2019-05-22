@@ -8,6 +8,8 @@ namespace :redmine do
   desc 'MoinMoin migration script'
   task :migrate_from_moinmoin => :environment do
     module MMMigrate
+      @single_page = 'C(2b2b)_Programming_Language'
+
       def self.migrate
         puts "No wiki defined" unless @target_project.wiki
         wiki = @target_project.wiki || 
@@ -24,6 +26,9 @@ namespace :redmine do
 	    next
 	  end
           new_title = page['title'].gsub('/', '-').gsub('P-GH-AIS-', '').gsub('P-GH-AIS', '')
+          if @single_page && @single_page != new_title
+            next
+          end
           #puts "Title: " + new_title
           p = wiki.find_or_new_page(new_title)
 	  #puts "New: #{p.new_record?}"
@@ -90,6 +95,7 @@ namespace :redmine do
 	  end
         end
 
+        puts "Wiki pages:      #{pageno-1}"
         puts "Wiki files:      #{migrated_wiki_attachments}"
         puts "Errors:          #{errors}"
 
