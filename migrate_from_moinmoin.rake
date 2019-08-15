@@ -266,95 +266,104 @@ namespace :redmine do
       # Basic wiki syntax conversion
       def self.convert_wiki_text(text, mm, p)
         #puts "--- CONVERT"
-        # Processing instructions
-        text = text.gsub(/^#.*$/, '')
-        # Macros
-        text = text.gsub(/^<<.*$/, '')
-        # Titles
-        text = text.gsub(/^(\=+)\s*([^=]+)\s*\=+\s*$/) {|s| "\nh#{$1.length}. #{$2}\n"}
-        # Internal links
-        parent = p.parent_title #'tbd/'
-        current = p.title + '-' #'tbd/'
-        if current == 'Wiki-'
-          current = ''
-        end
-        text = text.gsub(/\[\[(.*)\s+\|(.*)\]\]/) {|s| "[[#{parent}#{$1}|#{$2}]]"}
-        # Internal link to subpage, no alternate title
-        text = text.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)\]\]/) {|s| "[[/#{current}#{$1}]]"}
-        # Internal link to subpage, with alternate title
-        text = text.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)|([^\]]*)\]\]/) {|s| "[[/#{current}#{$1}|#{$2}]]"}
-        text = text.gsub(/\["([^"]*)"\]/) {|s| "[[#{parent}#{$1}]]"}
-	# Catch wikiwords with 2 or 3 parts
-        text = text.gsub(/(\s+)(([A-Z][a-z0-9]+){2,})(\s+|,)/) {|s| "#{$1}[[2ormoreparts#{$2}]]#{$4}"}
-	# No more need for explicit linebreaks
-        text = text.gsub(/\[\[BR\]\]/) {|s| ""}
-        # External Links
-        text = text.gsub(/\[(http[^\s]+)\s+([^\]]+)\]/) {|s| "\"#{$2}\":#{$1}"}
-        text = text.gsub(/\[(http[^\s]+)\]/) {|s| "#{$1}"}
-        # Highlighting
-        text = text.gsub(/'''''([^\s])/, '_*\1')
-        text = text.gsub(/([^\s])'''''/, '\1*_')
-        text = text.gsub(/'''([^\s])/, '*\1')
-        text = text.gsub(/([^\s])'''/, '\1*')
-        text = text.gsub(/''([^\s])/, '_*\1')
-        text = text.gsub(/([^\s])''/, '\1*_')
-        # code
-        #text = text.gsub(/((^ [^\n]*\n)+)/m) { |s| "<pre>\n#{$1}</pre>\n" }
-        #text = text.gsub(/(^\n^ .*?$)/m) { |s| "<pre><code>#{$1}" }
-        #text = text.gsub(/(^ .*?\n)\n/m) { |s| "#{$1}</pre></code>\n" }
-        text = text.gsub(/\{\{\{\s*$/) { |s| "<pre><code>" }
-        #puts "BEFORE 4 #{text}"
-        text = text.gsub(/^\s*\}\}\}\s*$/) { |s| "</code></pre>\n" }
-        #puts "AFTER 4 #{text}"
-        text = text.gsub(/\{\{\{/) { |s| "<code>" }
-        text = text.gsub(/\}\}\}/) { |s| "</code>" }
-        # Some silly leading whitespace.
-        text = text.gsub(/<pre><code>\n/m) { |s| "<pre><code>" }        
-        text = text.gsub('#!cplusplus', '')
-        
-        # Tables
-        # Half-assed attempt
-        # First strip off the table formatting
-        text = text.gsub(/^\![^\|]*/, '')
-        text = text.gsub(/^\{\|[^\|]*$/, '{|')
-        # Now congeal the rows
-        while( text.gsub!(/(\|-.*)\n(\|\w.*)$/m, '\1\2'))
-        end
-        # Now congeal the headers
-        while( text.gsub!(/(\{\|.*)\n(\|\w.*)$/m, '\1\2'))
-        end
-        # format the headers properly
-        while( text.gsub!(/(\{\|.*)\|([^_].*)$/, '\1|_. \2'))
-        end
-        # get rid of leading '{|'
-        text = text.gsub(/^\{\|(.*)$/) { |s| "table(stdtbl)\n#{$1}|" }
-        # get rid of leading '|-'
-        text = text.gsub(/^\|-(.*)$/, '\1|')
-        # get rid of trailing '|}'
-        text = text.gsub(/^\|\}.*$/, '')
-        # Internal Links
-        text = text.gsub(/\[\[Image:([^\s]+)\]\]/) { |s| "!#{$1}!" }
-        # Wiki page separator ':'
-        while( text.gsub!(/(\[\[\s*\w+):(\w+)/, '\1_\2') )
-        end
+        new_text = ''
+        text.each_line { |line|
+          # Processing instructions
+          line = line.gsub(/^#.*$/, '')
+          # Macros
+          line = line.gsub(/^<<.*$/, '')
+          # Titles
+          line = line.gsub(/^(\=+)\s*([^=]+)\s*\=+\s*$/) {|s| "\nh#{$1.length}. #{$2}\n"}
+          # Internal links
+          parent = p.parent_title #'tbd/'
+          current = p.title + '-' #'tbd/'
+          if current == 'Wiki-'
+            current = ''
+          end
+          #!!line = line.gsub(/\[\[(.*)\s+\|(.*)\]\]/) {|s| "[[#{parent}#{$1}|#{$2}]]"}
+          # Internal link to subpage, no alternate title
+          old_line = line
+          line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)\]\]/) {|s| "[[/#{current}#{$1}]]"}
 
-	# inline image attachments
-        text = text.gsub(/\s*attachment:([^\s\.]+)\.(jpg|gif|png)/i) {|s| "\n\n!#{$1}.#{$2}!"}
-        text = text.gsub(/\s*attachment:([^\s]+)/i) {|s| "\n\nattachment:#{$1}"}
+          # Internal link to subpage, with alternate title
+          if line == old_line
+            line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "[[/#{current}#{$1}|#{$2}]]"}
+          end
+          
+          #!!line = line.gsub(/\["([^"]*)"\]/) {|s| "[[#{parent}#{$1}]]"}
+	  # Catch wikiwords with 2 or 3 parts
+          #!!line = line.gsub(/(\s+)(([A-Z][a-z0-9]+){2,})(\s+|,)/) {|s| "#{$1}[[2ormoreparts#{$2}]]#{$4}"}
+	  # No more need for explicit linebreaks
+          line = line.gsub(/\[\[BR\]\]/) {|s| ""}
+          # External Links
+          line = line.gsub(/\[(http[^\s]+)\s+([^\]]+)\]/) {|s| "\"#{$2}\":#{$1}"}
+          line = line.gsub(/\[(http[^\s]+)\]/) {|s| "#{$1}"}
+          # Highlighting
+          line = line.gsub(/'''''([^\s])/, '_*\1')
+          line = line.gsub(/([^\s])'''''/, '\1*_')
+          line = line.gsub(/'''([^\s])/, '*\1')
+          line = line.gsub(/([^\s])'''/, '\1*')
+          line = line.gsub(/''([^\s])/, '_*\1')
+          line = line.gsub(/([^\s])''/, '\1*_')
+          # code
+          #line = line.gsub(/((^ [^\n]*\n)+)/m) { |s| "<pre>\n#{$1}</pre>\n" }
+          #line = line.gsub(/(^\n^ .*?$)/m) { |s| "<pre><code>#{$1}" }
+          #line = line.gsub(/(^ .*?\n)\n/m) { |s| "#{$1}</pre></code>\n" }
+          line = line.gsub(/\{\{\{\s*$/) { |s| "<pre><code>" }
+          #puts "BEFORE 4 #{line}"
+          line = line.gsub(/^\s*\}\}\}\s*$/) { |s| "</code></pre>\n" }
+          #puts "AFTER 4 #{line}"
+          line = line.gsub(/\{\{\{/) { |s| "<code>" }
+          line = line.gsub(/\}\}\}/) { |s| "</code>" }
+          # Some silly leading whitespace.
+          line = line.gsub(/<pre><code>\n/m) { |s| "<pre><code>" }        
+          line = line.gsub('#!cplusplus', '')
+          
+          # Tables
+          # Half-assed attempt
+          # First strip off the table formatting
+          line = line.gsub(/^\![^\|]*/, '')
+          line = line.gsub(/^\{\|[^\|]*$/, '{|')
+          # Now congeal the rows
+          while( line.gsub!(/(\|-.*)\n(\|\w.*)$/m, '\1\2'))
+          end
+          # Now congeal the headers
+          while( line.gsub!(/(\{\|.*)\n(\|\w.*)$/m, '\1\2'))
+          end
+          # format the headers properly
+          while( line.gsub!(/(\{\|.*)\|([^_].*)$/, '\1|_. \2'))
+          end
+          # get rid of leading '{|'
+          line = line.gsub(/^\{\|(.*)$/) { |s| "table(stdtbl)\n#{$1}|" }
+          # get rid of leading '|-'
+          line = line.gsub(/^\|-(.*)$/, '\1|')
+          # get rid of trailing '|}'
+          line = line.gsub(/^\|\}.*$/, '')
+          # Internal Links
+          line = line.gsub(/\[\[Image:([^\s]+)\]\]/) { |s| "!#{$1}!" }
+          # Wiki page separator ':'
+          while( line.gsub!(/(\[\[\s*\w+):(\w+)/, '\1_\2') )
+          end
 
-	# throw away pragma statements
-	#puts text
-        text = text.gsub(/^#pragma (.*)$/isu) {|s| ""}
+	  # inline image attachments
+          line = line.gsub(/\s*attachment:([^\s\.]+)\.(jpg|gif|png)/i) {|s| "\n\n!#{$1}.#{$2}!"}
+          line = line.gsub(/\s*attachment:([^\s]+)/i) {|s| "\n\nattachment:#{$1}"}
 
-        # Strip whitespace before bullets
-        text = text.gsub(/[ \t]+\*/, '*')
-        
-        # Strip whitespace before enumerations
-        text = text.gsub(/[ \t]+1\./, '#')
+	  # throw away pragma statements
+	  #puts line
+          line = line.gsub(/^#pragma (.*)$/isu) {|s| ""}
 
-        #puts "FINAL #{text}"
+          # Strip whitespace before bullets
+          line = line.gsub(/[ \t]+\*/, '*')
+          
+          # Strip whitespace before enumerations
+          line = line.gsub(/[ \t]+1\./, '#')
 
-        text
+          new_text = new_text + line
+        }
+        #puts "FINAL #{new_text}"
+
+        new_text
       end
     end
 
