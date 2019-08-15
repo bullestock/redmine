@@ -155,3 +155,4 @@ rm -r pages/*VxWorks*
 rm -r pages/Current*Work*List
 rm -r pages/Wiki*
 rm -r pages/BadContent
+rm -r pages/dsv*

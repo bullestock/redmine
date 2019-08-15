@@ -56,7 +56,7 @@ namespace :redmine do
 	        puts "Content: #{p.content}"
 		abort "ABORT: No content for version #{i}"
 	      end
-	      content.text = self.convert_wiki_text(revision, mm)
+	      content.text = self.convert_wiki_text(revision, mm, p)
 	      content.author = User.find_by_mail("tma@gatehouse.dk")
 	      if rev == 0
 	        abort "Revision is zero for #{new_title}"
@@ -264,15 +264,28 @@ namespace :redmine do
       end
       
       # Basic wiki syntax conversion
-      def self.convert_wiki_text(text,mm)
+      def self.convert_wiki_text(text, mm, p)
         #puts "--- CONVERT"
+        # Processing instructions
+        text = text.gsub(/^#.*$/, '')
+        # Macros
+        text = text.gsub(/^<<.*$/, '')
         # Titles
         text = text.gsub(/^(\=+)\s*([^=]+)\s*\=+\s*$/) {|s| "\nh#{$1.length}. #{$2}\n"}
         # Internal links
-        text = text.gsub(/\[\[(.*)\s+\|(.*)\]\]/) {|s| "[[#{$1}|#{$2}]]"}
-        text = text.gsub(/\["([^"]*)"\]/) {|s| "[[#{$1}]]"}
+        parent = p.parent_title #'tbd/'
+        current = p.title + '-' #'tbd/'
+        if current == 'Wiki-'
+          current = ''
+        end
+        text = text.gsub(/\[\[(.*)\s+\|(.*)\]\]/) {|s| "[[#{parent}#{$1}|#{$2}]]"}
+        # Internal link to subpage, no alternate title
+        text = text.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)\]\]/) {|s| "[[/#{current}#{$1}]]"}
+        # Internal link to subpage, with alternate title
+        text = text.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)|([^\]]*)\]\]/) {|s| "[[/#{current}#{$1}|#{$2}]]"}
+        text = text.gsub(/\["([^"]*)"\]/) {|s| "[[#{parent}#{$1}]]"}
 	# Catch wikiwords with 2 or 3 parts
-        text = text.gsub(/(\s+)(([A-Z][a-z0-9]+){2,})(\s+|,)/) {|s| "#{$1}[[#{$2}]]#{$4}"}
+        text = text.gsub(/(\s+)(([A-Z][a-z0-9]+){2,})(\s+|,)/) {|s| "#{$1}[[2ormoreparts#{$2}]]#{$4}"}
 	# No more need for explicit linebreaks
         text = text.gsub(/\[\[BR\]\]/) {|s| ""}
         # External Links
