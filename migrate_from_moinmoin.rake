@@ -268,10 +268,15 @@ namespace :redmine do
       def self.convert_wiki_text(text, mm, p)
         #puts "--- CONVERT"
         new_text = ''
+        nof_spaces = 0
+        indent_level = 0
+        in_bullet_list = false
+        in_enumerated_list = false
         text.each_line { |line|
           # Processing instructions
           line = line.gsub(/^#.*$/, '')
           # Macros
+          line = line.gsub(/<<TableOfContents.*>>/, '{{toc}}')
           line = line.gsub(/^<<.*$/, '')
           # Titles
           line = line.gsub(/^(\=+)\s*([^=]+)\s*\=+\s*$/) {|s| "\nh#{$1.length}. #{$2}\n"}
@@ -395,12 +400,50 @@ namespace :redmine do
 	  #puts line
           line = line.gsub(/^#pragma (.*)$/isu) {|s| ""}
 
-          # Strip whitespace before bullets
-          line = line.gsub(/^[ \t]+\*/, '*')
+          # Bullets
+          if line.match? /[ \t]+\*/
+            cur_nof_spaces = line.count(' ') - line.lstrip.count(' ')
+            if in_bullet_list
+              if cur_nof_spaces > nof_spaces
+                indent_level = indent_level+1
+              elsif cur_nof_spaces < nof_spaces && indent_level > 0
+                indent_level = indent_level-1
+              end
+              nof_spaces = cur_nof_spaces
+            else
+              in_bullet_list = true
+              nof_spaces = cur_nof_spaces
+              indent_level = 0
+            end
+            line = line.gsub(/[ \t]+\*/, '*' * (indent_level+1))
+          else
+            in_bullet_list = false
+          end
           
-          # Strip whitespace before enumerations
-          line = line.gsub(/^[ \t]+1\./, '#')
+          # Enumerations
+          if line.match? /^[ \t]+1\./
+            cur_nof_spaces = line.count(' ') - line.lstrip.count(' ')
+            if in_enumerated_list
+              if cur_nof_spaces > nof_spaces
+                indent_level = indent_level+1
+              elsif cur_nof_spaces < nof_spaces && indent_level > 0
+                indent_level = indent_level-1
+              end
+              nof_spaces = cur_nof_spaces
+            else
+              in_enumerated_list = true
+              nof_spaces = cur_nof_spaces
+              indent_level = 0
+            end
+            line = line.gsub(/[ \t]+1\./, '#' * (indent_level+1))
+          else
+            in_enumerated_list = false
+          end
 
+          # Colour
+          line = line.gsub(/<bgcolor=\"(#[0-9a-fA-F]+)\">([^\|]+)/) { |s| "%{background:#{$1}}#{$2}%" }
+
+          
           new_text = new_text + line
         }
         #puts "FINAL #{new_text}"
