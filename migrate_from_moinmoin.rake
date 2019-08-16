@@ -25,7 +25,7 @@ namespace :redmine do
 	  if !page
 	    next
 	  end
-          new_title = page['title'].gsub('/', '-').gsub('P-GH-AIS-', '').gsub('P-GH-AIS', '')
+          new_title = page['title'].gsub('/', '\\').gsub('P\\GH\\AIS\\', '').gsub('P\\GH\\AIS', '')
           if @single_page && @single_page != new_title
             next
           end
@@ -57,6 +57,7 @@ namespace :redmine do
 		abort "ABORT: No content for version #{i}"
 	      end
 	      content.text = self.convert_wiki_text(revision, mm, p)
+              #puts "Text: #{content.text}"
 	      content.author = User.find_by_mail("tma@gatehouse.dk")
 	      if rev == 0
 	        abort "Revision is zero for #{new_title}"
@@ -274,20 +275,29 @@ namespace :redmine do
           line = line.gsub(/^<<.*$/, '')
           # Titles
           line = line.gsub(/^(\=+)\s*([^=]+)\s*\=+\s*$/) {|s| "\nh#{$1.length}. #{$2}\n"}
-          # Internal links
-          parent = p.parent_title #'tbd/'
-          current = p.title + '-' #'tbd/'
-          if current == 'Wiki-'
-            current = ''
-          end
-          #!!line = line.gsub(/\[\[(.*)\s+\|(.*)\]\]/) {|s| "[[#{parent}#{$1}|#{$2}]]"}
-          # Internal link to subpage, no alternate title
-          old_line = line
-          line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)\]\]/) {|s| "[[/#{current}#{$1}]]"}
 
-          # Internal link to subpage, with alternate title
+          # External links
+          old_line = line
+          line = line.gsub(/\[\[http:\/\/([A-Za-z0-9\-:\.\/]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "\"#{$2}\":http://#{$1}"}
           if line == old_line
-            line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "[[/#{current}#{$1}|#{$2}]]"}
+            line = line.gsub(/\[\[https:\/\/([A-Za-z0-9\-:\.\/]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "\"#{$2}\":https://#{$1}"}
+          end
+          if line == old_line
+            # Internal links
+            parent = p.parent_title
+            current = p.title + '\\'
+            if current == 'Wiki\\'
+              current = ''
+            end
+            #!!line = line.gsub(/\[\[(.*)\s+\|(.*)\]\]/) {|s| "[[#{parent}#{$1}|#{$2}]]"}
+            # Internal link to subpage, no alternate title
+            old_line = line
+            line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)\]\]/) {|s| "[[/#{current}#{$1}]]"}
+
+            # Internal link to subpage, with alternate title
+            if line == old_line
+              line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "[[/#{current}#{$1}|#{$2}]]"}
+            end
           end
           
           #!!line = line.gsub(/\["([^"]*)"\]/) {|s| "[[#{parent}#{$1}]]"}
