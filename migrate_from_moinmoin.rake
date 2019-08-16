@@ -25,7 +25,7 @@ namespace :redmine do
 	  if !page
 	    next
 	  end
-          new_title = page['title'].gsub('/', '\\').gsub('P\\GH\\AIS\\', '').gsub('P\\GH\\AIS', '')
+          new_title = page['title'].gsub('/', '\\').gsub('-', '_').gsub('P\\GH\\AIS\\', '').gsub('P\\GH\\AIS', '')
           if @single_page && @single_page != new_title
             next
           end
@@ -43,7 +43,7 @@ namespace :redmine do
 	    #p.save
 	    #puts "Title #{new_title} Parent #{p.parent_title}"
 	  end
-	  #puts "Page #{pageno}: #{new_title}"
+	  puts "Page #{pageno}: #{new_title}"
 	  pageno = pageno + 1
 	  begin
             content = nil
@@ -276,6 +276,9 @@ namespace :redmine do
           # Titles
           line = line.gsub(/^(\=+)\s*([^=]+)\s*\=+\s*$/) {|s| "\nh#{$1.length}. #{$2}\n"}
 
+	  # attachments
+          line = line.gsub(/\[\[attachment:([a-zA-Z0-9_\.]+)\]\]/i) {|s| "attachment:#{$1}"}
+          
           # External links
           old_line = line
           line = line.gsub(/\[\[http:\/\/([A-Za-z0-9\-:\.\/_]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "\"#{$2}\":http://#{$1}"}
@@ -291,23 +294,39 @@ namespace :redmine do
             end
 
             old_line = line
-            # Internal absolute link (3 levels) to subpage, no alternate title
-            line = line.gsub(/\[\[P\/([A-Za-z0-9]+)\/([A-Za-z]+)\/([A-Za-z0-9_ \-]+)\]\]/) {|s| "[[P\\#{$1}\\#{$2}\\#{$3}]]"}
+            # Internal absolute top-level link (3 levels) to subpage, no alternate title
+            line = line.gsub(/\[\[P\/GH\/AIS\/([A-Za-z0-9_]+)\/([A-Za-z0-9_-]+)\/([A-Za-z0-9_ \-]+)\]\]/) {|s| "[[#{$1}\\#{$2}\\#{$3}]]"}
             if line == old_line
-              # Internal absolute link (2 levels) to subpage, no alternate title
-              line = line.gsub(/\[\[P\/([A-Za-z0-9]+)\/([A-Za-z0-9_ \-]+)\]\]/) {|s| "[[P\\#{$1}\\#{$2}]]"}
+              # Internal absolute top-level link (2 levels) to subpage, no alternate title
+              line = line.gsub(/\[\[P\/GH\/AIS\/([A-Za-z0-9_]+)\/([A-Za-z0-9_ \-]+)\]\]/) {|s| "[[#{$1}\\#{$2}]]"}
               if line == old_line
-                # Internal absolute link (1 level) to subpage, no alternate title
-                line = line.gsub(/\[\[P\/([A-Za-z0-9_ \-]+)\]\]/) {|s| "[[P\\#{$1}]]"}
+                # Internal absolute top-level link (1 level) to subpage, no alternate title
+                line = line.gsub(/\[\[P\/GH\/AIS\/([A-Za-z0-9_ \-]+)\]\]/) {|s| "[[#{$1}]]"}
                 if line == old_line
-
-                  # Internal link to subpage, no alternate title
-                  old_line = line
-                  line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9_ \->]+)\]\]/) {|s| "[[#{current}#{$1}]]"}
-                  
-                  # Internal link to subpage, with alternate title
+                  # Internal absolute link (4 levels) to subpage, no alternate title
+                  line = line.gsub(/\[\[P\/([A-Za-z0-9]+)\/([A-Za-z0-9]+)\/([A-Za-z0-9_-]+)\/([A-Za-z0-9_ \-]+)\]\]/) {|s| "[[P\\#{$1}\\#{$2}\\#{$3}\\#{$4}]]"}
                   if line == old_line
-                    line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "[[#{current}#{$1}|#{$2}]]"}
+                    # Internal absolute link (3 levels) to subpage, no alternate title
+                    line = line.gsub(/\[\[P\/([A-Za-z0-9]+)\/([A-Za-z]+)\/([A-Za-z0-9_ \-]+)\]\]/) {|s| "[[P\\#{$1}\\#{$2}\\#{$3}]]"}
+                    if line == old_line
+                      # Internal absolute link (2 levels) to subpage, no alternate title
+                      line = line.gsub(/\[\[P\/([A-Za-z0-9]+)\/([A-Za-z0-9_ \-]+)\]\]/) {|s| "[[P\\#{$1}\\#{$2}]]"}
+                      if line == old_line
+                        # Internal absolute link (1 level) to subpage, no alternate title
+                        line = line.gsub(/\[\[P\/([A-Za-z0-9_ \-]+)\]\]/) {|s| "[[P\\#{$1}]]"}
+                        if line == old_line
+
+                          # Internal link to subpage, no alternate title
+                          old_line = line
+                          line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9_ \->]+)\]\]/) {|s| "[[#{current}#{$1}]]"}
+                          
+                          # Internal link to subpage, with alternate title
+                          if line == old_line
+                            line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "[[#{current}#{$1}|#{$2}]]"}
+                          end
+                        end
+                      end
+                    end
                   end
                 end
               end
@@ -371,10 +390,6 @@ namespace :redmine do
           # Wiki page separator ':'
           while( line.gsub!(/(\[\[\s*\w+):(\w+)/, '\1_\2') )
           end
-
-	  # inline image attachments
-          line = line.gsub(/\s*attachment:([^\s\.]+)\.(jpg|gif|png)/i) {|s| "\n\n!#{$1}.#{$2}!"}
-          line = line.gsub(/\s*attachment:([^\s]+)/i) {|s| "\n\nattachment:#{$1}"}
 
 	  # throw away pragma statements
 	  #puts line
