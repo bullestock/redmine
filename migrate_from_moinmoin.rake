@@ -43,7 +43,7 @@ namespace :redmine do
 	    #p.save
 	    #puts "Title #{new_title} Parent #{p.parent_title}"
 	  end
-	  puts "Page #{pageno}: #{new_title}"
+	  #puts "Page #{pageno}: #{new_title}"
 	  pageno = pageno + 1
 	  begin
             content = nil
@@ -278,9 +278,9 @@ namespace :redmine do
 
           # External links
           old_line = line
-          line = line.gsub(/\[\[http:\/\/([A-Za-z0-9\-:\.\/]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "\"#{$2}\":http://#{$1}"}
+          line = line.gsub(/\[\[http:\/\/([A-Za-z0-9\-:\.\/_]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "\"#{$2}\":http://#{$1}"}
           if line == old_line
-            line = line.gsub(/\[\[https:\/\/([A-Za-z0-9\-:\.\/]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "\"#{$2}\":https://#{$1}"}
+            line = line.gsub(/\[\[https:\/\/([A-Za-z0-9\-:\.\/_]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "\"#{$2}\":https://#{$1}"}
           end
           if line == old_line
             # Internal links
@@ -292,7 +292,7 @@ namespace :redmine do
             #!!line = line.gsub(/\[\[(.*)\s+\|(.*)\]\]/) {|s| "[[#{parent}#{$1}|#{$2}]]"}
             # Internal link to subpage, no alternate title
             old_line = line
-            line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)\]\]/) {|s| "[[/#{current}#{$1}]]"}
+            line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9_ \->]+)\]\]/) {|s| "[[/#{current}#{$1}]]"}
 
             # Internal link to subpage, with alternate title
             if line == old_line
