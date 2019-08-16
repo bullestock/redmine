@@ -289,14 +289,28 @@ namespace :redmine do
             if current == 'Wiki\\'
               current = ''
             end
-            #!!line = line.gsub(/\[\[(.*)\s+\|(.*)\]\]/) {|s| "[[#{parent}#{$1}|#{$2}]]"}
-            # Internal link to subpage, no alternate title
-            old_line = line
-            line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9_ \->]+)\]\]/) {|s| "[[/#{current}#{$1}]]"}
 
-            # Internal link to subpage, with alternate title
+            old_line = line
+            # Internal absolute link (3 levels) to subpage, no alternate title
+            line = line.gsub(/\[\[P\/([A-Za-z0-9]+)\/([A-Za-z]+)\/([A-Za-z0-9_ \-]+)\]\]/) {|s| "[[P\\#{$1}\\#{$2}\\#{$3}]]"}
             if line == old_line
-              line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "[[/#{current}#{$1}|#{$2}]]"}
+              # Internal absolute link (2 levels) to subpage, no alternate title
+              line = line.gsub(/\[\[P\/([A-Za-z0-9]+)\/([A-Za-z0-9_ \-]+)\]\]/) {|s| "[[P\\#{$1}\\#{$2}]]"}
+              if line == old_line
+                # Internal absolute link (1 level) to subpage, no alternate title
+                line = line.gsub(/\[\[P\/([A-Za-z0-9_ \-]+)\]\]/) {|s| "[[P\\#{$1}]]"}
+                if line == old_line
+
+                  # Internal link to subpage, no alternate title
+                  old_line = line
+                  line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9_ \->]+)\]\]/) {|s| "[[#{current}#{$1}]]"}
+                  
+                  # Internal link to subpage, with alternate title
+                  if line == old_line
+                    line = line.gsub(/\[\[\/([A-Z][A-Za-z0-9]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "[[#{current}#{$1}|#{$2}]]"}
+                  end
+                end
+              end
             end
           end
           
@@ -305,9 +319,11 @@ namespace :redmine do
           #!!line = line.gsub(/(\s+)(([A-Z][a-z0-9]+){2,})(\s+|,)/) {|s| "#{$1}[[2ormoreparts#{$2}]]#{$4}"}
 	  # No more need for explicit linebreaks
           line = line.gsub(/\[\[BR\]\]/) {|s| ""}
+
           # External Links
           line = line.gsub(/\[(http[^\s]+)\s+([^\]]+)\]/) {|s| "\"#{$2}\":#{$1}"}
           line = line.gsub(/\[(http[^\s]+)\]/) {|s| "#{$1}"}
+
           # Highlighting
           line = line.gsub(/'''''([^\s])/, '_*\1')
           line = line.gsub(/([^\s])'''''/, '\1*_')
@@ -315,6 +331,7 @@ namespace :redmine do
           line = line.gsub(/([^\s])'''/, '\1*')
           line = line.gsub(/''([^\s])/, '_*\1')
           line = line.gsub(/([^\s])''/, '\1*_')
+
           # code
           #line = line.gsub(/((^ [^\n]*\n)+)/m) { |s| "<pre>\n#{$1}</pre>\n" }
           #line = line.gsub(/(^\n^ .*?$)/m) { |s| "<pre><code>#{$1}" }
@@ -364,10 +381,10 @@ namespace :redmine do
           line = line.gsub(/^#pragma (.*)$/isu) {|s| ""}
 
           # Strip whitespace before bullets
-          line = line.gsub(/[ \t]+\*/, '*')
+          line = line.gsub(/^[ \t]+\*/, '*')
           
           # Strip whitespace before enumerations
-          line = line.gsub(/[ \t]+1\./, '#')
+          line = line.gsub(/^[ \t]+1\./, '#')
 
           new_text = new_text + line
         }
