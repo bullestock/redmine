@@ -441,8 +441,8 @@ namespace :redmine do
           end
 
           # Colour
-          line = line.gsub(/<bgcolor=\"(#[0-9a-fA-F]+)\">([^\|]+)/) { |s| "%{background:#{$1}}#{$2}%" }
-
+          old_line = line
+          line = line.gsub(/<bgcolor=\"(#[0-9a-fA-F]+)\"[^>]*>([^\|]+) *\|/) { |s| "{background:#{$1}}. #{$2}|" }
           
           new_text = new_text + line
         }
