@@ -462,8 +462,8 @@ namespace :redmine do
       end
     end    
     
-    MMMigrate.target_project_identifier 'ais'
-    MMMigrate.target_moin_moin_path '/home/bitnami/moin/pages'
+    MMMigrate.target_project_identifier 'gh-pais'
+    MMMigrate.target_moin_moin_path '/home/gh/moin/ghwiki/data/pages'
     MMMigrate.migrate    
   end
 end
