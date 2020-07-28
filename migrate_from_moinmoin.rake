@@ -286,9 +286,9 @@ namespace :redmine do
           
           # External links
           old_line = line
-          line = line.gsub(/\[\[http:\/\/([A-Za-z0-9\-:\.\/_]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "\"#{$2}\":http://#{$1}"}
+          line = line.gsub(/\[\[http:\/\/([A-Za-z0-9\-:\.\/_]+)\|([a-zA-Z0-9 \/-]*)\]\]/) {|s| "\"#{$2}\":http://#{$1}"}
           if line == old_line
-            line = line.gsub(/\[\[https:\/\/([A-Za-z0-9\-:\.\/_]+)\|([a-zA-Z0-9 \/]*)\]\]/) {|s| "\"#{$2}\":https://#{$1}"}
+            line = line.gsub(/\[\[https:\/\/([A-Za-z0-9\-:\.\/_]+)\|([a-zA-Z0-9 \/-]*)\]\]/) {|s| "\"#{$2}\":https://#{$1}"}
           end
           if line == old_line
             # Internal links
