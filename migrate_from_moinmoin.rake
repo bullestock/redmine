@@ -297,6 +297,9 @@ namespace :redmine do
             if current == 'Wiki\\'
               current = ''
             end
+            if current == 'AIS\\'
+              current = ''
+            end
 
             old_line = line
             # Internal absolute top-level link (3 levels) to subpage, no alternate title
