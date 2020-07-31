@@ -399,6 +399,9 @@ namespace :redmine do
           while( line.gsub!(/(\[\[\s*\w+):(\w+)/, '\1_\2') )
           end
 
+          # Hack hack hack
+          line = line.gsub(/\|\|/, '|')
+          
 	  # throw away pragma statements
 	  #puts line
           line = line.gsub(/^#pragma (.*)$/isu) {|s| ""}
