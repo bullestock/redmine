@@ -147,6 +147,7 @@ rm -r pages/New*
 rm -r pages/Inmar*
 rm -r pages/Bolds*
 rm -r pages/ETSI*
+rm -r pages/*ETI*
 rm -r pages/freja*
 rm -r pages/JNJ
 rm -r pages/Moin*

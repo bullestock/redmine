@@ -26,11 +26,18 @@ namespace :redmine do
 	    next
 	  end
           new_title = page['title'].gsub('/', '\\').gsub('-', '_').gsub('P\\GH\\AIS\\', '').gsub('P\\GH\\AIS', '')
+          # Special cases
+          if new_title == ''
+            new_title = 'OldIndex'
+          end
           if @single_page && @single_page != new_title
             next
           end
           #puts "Title: " + new_title
-          p = wiki.find_or_new_page(new_title)
+          p = wiki.find_page(new_title)
+          if !p || new_title != p.title
+            p = WikiPage.new(:wiki => wiki, :title => Wiki.titleize(new_title))
+          end
 	  #puts "New: #{p.new_record?}"
 	  is_new = p.new_record?
 	  if new_title.include? "-"
@@ -449,6 +456,9 @@ namespace :redmine do
           # Colour
           old_line = line
           line = line.gsub(/<bgcolor=\"(#[0-9a-fA-F]+)\"[^>]*>([^\|]+) *\|/) { |s| "{background:#{$1}}. #{$2}|" }
+
+          # Index hack
+          line.gsub!('OldIndex\\', '')
           
           new_text = new_text + line
         }
